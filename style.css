@@ -1,0 +1,46 @@
+#loginButton {
+  background-color: #30dd30;
+}
+
+#loginButton:hover {
+  background-color: #26b326;
+}
+
+#logoutButton {
+  background-color: #36bef4;
+}
+
+#logoutButton:hover {
+  background-color: #169ace;
+}
+
+#loginButton,
+#logoutButton {
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+#profileContainer {
+  border: solid 1px green;
+}
+
+#welcomeInfoContainer{
+  border: solid 1px purple;
+}
+
+#transactionsContainer {
+  border: solid 1px rgb(25, 85, 105);
+}
+
+#transactionElement {
+  border: solid 1px rgb(151, 195, 210);
+}

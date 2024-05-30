@@ -22,7 +22,7 @@
 
 ## 🏃 Run project & testing
 
-1. Go to https://github.com/maeorg/ with your browser  
+1. Go to https://maeorg.github.io/graphql/ with your browser  
 2. Log in with your 01.kood.tech intra credentials
 3. Have fun and look around on the page and try different data features
 
