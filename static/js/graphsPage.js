@@ -1,14 +1,16 @@
 import { CreateLogoutButton } from "./authentication.js";
 import { GetGradeForProjectByObjectId, GetUserAudits, GetUserProfileInfo, GetUserTransactions } from "./graphQLRequests.js";
-import { CreateXpByProjectGraph } from "./graphsSVG.js";
+import { CreateAuditRatioLineChart, CreateXpByProjectGraph } from "./graphsSVG.js";
 
 export async function LoadGraphsPage() {
-    const logoutButton = await CreateLogoutButton();
     const main = document.querySelector('.main');
-    main.appendChild(logoutButton);
 
     const userToken = localStorage.getItem('jwt');
     const userProfile = await GetUserProfileInfo(userToken);
+
+    const logoutButton = await CreateLogoutButton();
+    const menuContainer = document.getElementById('menuContainer');
+    menuContainer.appendChild(logoutButton);
 
     const welcomeInfoContainer = await CreateWelcomeInfoContainer(userProfile);
     main.appendChild(welcomeInfoContainer);
@@ -22,14 +24,71 @@ export async function LoadGraphsPage() {
     const upTransactions = sortedUserTransactions.filter(transaction => transaction.type === "up" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
     const downTransactions = sortedUserTransactions.filter(transaction => transaction.type === "down" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
 
-    const auditsInfoContainer = await CreateAuditsInfoContainer(userToken, upTransactions, downTransactions);
-    main.appendChild(auditsInfoContainer);
+    function CreateAuditsRatioData() {
+        let auditsRatiosData = [];
+        const oldestToNewestTransactions = userTransactions.data.transaction.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        const auditRatioTransactions = oldestToNewestTransactions.filter(transaction => (transaction.type === "up" || transaction.type === "down") && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
+        let upTransactionsSum = 0;
+        let downTransactionsSum = 0;
+        for (const transaction of auditRatioTransactions) {
+            const date = transaction.createdAt;
+            if (transaction.type == "up") {
+                upTransactionsSum += transaction.amount;
+            } else if (transaction.type == "down") {
+                downTransactionsSum += transaction.amount;
+            }
+            const auditRatio = (upTransactionsSum / downTransactionsSum).toFixed(1);
+            auditsRatiosData.push({ date: date, ratio: auditRatio });
+        }
+        return auditsRatiosData;
+    }
+    const auditsRatiosData = CreateAuditsRatioData();
 
     const transactionsContainer = await CreateTransactionsContainer(userToken, xpTransactions);
     main.appendChild(transactionsContainer);
 
+    const auditsInfoContainer = await CreateAuditsInfoContainer(userToken, upTransactions, downTransactions);
+    main.appendChild(auditsInfoContainer);
+
     const xpBarGraphContainer = await CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions);
     main.appendChild(xpBarGraphContainer);
+
+
+    // create and update audit ratio line chart
+    const auditRatioLineChartContainer = document.createElement('div');
+    auditRatioLineChartContainer.id = 'auditRatioLineChartContainer';
+    const chartContainer = document.createElement('div');
+    chartContainer.id = 'chartContainer';
+
+    const auditRatioLineChartTitle = document.createElement('div');
+    auditRatioLineChartTitle.id = 'auditRatioLineChartTitle';
+    auditRatioLineChartTitle.textContent = 'Audit Ratio Chart';
+    auditRatioLineChartContainer.appendChild(auditRatioLineChartTitle);
+
+    const timePeriodContainer = document.createElement('div');
+    timePeriodContainer.id = 'timePeriodContainer';
+    auditRatioLineChartContainer.appendChild(timePeriodContainer);
+    const timePeriod = document.createElement('select');
+    timePeriod.id = 'timePeriod';
+    function addOption(value, text) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.innerText = text;
+        timePeriod.appendChild(option);
+    }
+    const options = [{ value: 'all', text: 'All Time' },
+    { value: '1y', text: 'Last 1 Year' },
+    { value: '6m', text: 'Last 6 Months' },
+    { value: '3m', text: 'Last 3 Months' },
+    { value: '1m', text: 'Last 1 Month' }
+    ];
+    options.forEach(option => {
+        addOption(option.value, option.text);
+    });
+    timePeriodContainer.appendChild(timePeriod);
+    auditRatioLineChartContainer.appendChild(chartContainer);
+    main.appendChild(auditRatioLineChartContainer);
+    await CreateAuditRatioLineChart(auditsRatiosData);
 }
 
 export async function CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions) {
@@ -39,7 +98,15 @@ export async function CreateXpGraphsContainer(xpTransactions, upTransactions, do
     const createButton = (text, onClick) => {
         const button = document.createElement('button');
         button.textContent = text;
-        button.addEventListener('click', onClick);
+        // button.addEventListener('click', onClick);
+        button.addEventListener('click', () => {
+            // Remove 'selected' class from all buttons
+            document.querySelectorAll('.xpGraphButton').forEach(btn => btn.classList.remove('selectedGraphButton'));
+            // Add 'selected' class to the clicked button
+            button.classList.add('selectedGraphButton');
+            onClick();
+        });
+        button.classList.add('xpGraphButton'); // Add class for styling
         return button;
     };
 
@@ -63,8 +130,8 @@ export async function CreateXpGraphsContainer(xpTransactions, upTransactions, do
     xpBarGraphArea.id = 'xpBarGraphArea';
     xpBarGraphContainer.appendChild(xpBarGraphArea);
 
-    // show default graph when loaded
-    displayGraph(xpTransactions);
+    // display default graph when page loaded
+    xpButton.click();
 
     return xpBarGraphContainer;
 }
@@ -81,40 +148,51 @@ export async function CreateAuditsInfoContainer(userToken, upTransactions, downT
     auditsRatio.innerText = 'Audits ratio: ' + (totalUp / totalDown).toFixed(1);
     auditsInfoContainer.appendChild(auditsRatio);
 
+    const auditsElementsContainer = document.createElement('div');
+    auditsElementsContainer.id = 'auditsElementsContainer';
+
+    const displayAuditsList = (transactions) => {
+        auditsElementsContainer.innerHTML = '';
+        for (const transaction of transactions) {
+            const auditElement = document.createElement('div');
+            auditElement.id = 'auditElement';
+
+            const projectNameInfo = transaction.path.substring(transaction.path.lastIndexOf('/') + 1);
+            const auditProjectName = document.createElement('div');
+            auditProjectName.id = 'auditProjectName';
+            auditProjectName.className = 'audit-column';
+            auditProjectName.innerText = projectNameInfo;
+            auditElement.appendChild(auditProjectName);
+
+            const auditXP = document.createElement('div');
+            auditXP.id = 'auditXP';
+            auditXP.className = 'audit-column';
+            auditXP.innerText = (transaction.amount / 1000).toFixed(2) + ' kB';
+            auditElement.appendChild(auditXP);
+
+            const auditCreatedAt = document.createElement('div');
+            auditCreatedAt.id = 'auditCreatedAt';
+            auditCreatedAt.className = 'audit-column';
+            auditCreatedAt.innerText = FormatDate(transaction.createdAt);
+            auditElement.appendChild(auditCreatedAt);
+
+            auditsElementsContainer.appendChild(auditElement);
+        }
+    }
+
     const doneAudits = document.createElement('div');
     doneAudits.id = 'doneAudits';
     doneAudits.innerText = 'Done: ' + (totalUp / 1000000).toFixed(2) + ' MB';
+    doneAudits.addEventListener('click', () => displayAuditsList(downTransactions));
     auditsInfoContainer.appendChild(doneAudits);
 
     const receivedAudits = document.createElement('div');
     receivedAudits.id = 'receivedAudits';
     receivedAudits.innerText = 'Received: ' + (totalDown / 1000000).toFixed(2) + ' MB';
+    receivedAudits.addEventListener('click', () => displayAuditsList(upTransactions));
     auditsInfoContainer.appendChild(receivedAudits);
-    for (const transaction of downTransactions) {
-        const receivedAuditElement = document.createElement('div');
-        receivedAuditElement.id = 'receivedAuditElement';
 
-        const projectNameInfo = transaction.path.substring(transaction.path.lastIndexOf('/') + 1);
-        const receivedAuditProjectName = document.createElement('div');
-        receivedAuditProjectName.id = 'receivedAuditProjectName';
-        receivedAuditProjectName.className = 'audit-column';
-        receivedAuditProjectName.innerText = projectNameInfo;
-        receivedAuditElement.appendChild(receivedAuditProjectName);
-
-        const receivedAuditXP = document.createElement('div');
-        receivedAuditXP.id = 'receivedAuditXP';
-        receivedAuditXP.className = 'audit-column';
-        receivedAuditXP.innerText = (transaction.amount / 1000).toFixed(2) + ' kB';
-        receivedAuditElement.appendChild(receivedAuditXP);
-
-        const auditCreatedAt = document.createElement('div');
-        auditCreatedAt.id = 'auditCreatedAt';
-        auditCreatedAt.className = 'audit-column';
-        auditCreatedAt.innerText = FormatDate(transaction.createdAt);
-        receivedAuditElement.appendChild(auditCreatedAt);
-
-        auditsInfoContainer.appendChild(receivedAuditElement);
-    }
+    auditsInfoContainer.appendChild(auditsElementsContainer);
 
     return auditsInfoContainer;
 }
@@ -129,6 +207,24 @@ export async function CreateTransactionsContainer(userToken, xpTransactions) {
     totalXp.textContent = 'Total XP: ' + Math.round(totalXpInfo / 1000) + ' kB';
     transactionsContainer.appendChild(totalXp);
 
+    const transactionsTableTitle = document.createElement('div');
+    transactionsTableTitle.id = 'transactionsTableTitle';
+    const projectName = document.createElement('div');
+    projectName.id = 'projectName';
+    projectName.className = 'xpTable-column';
+    projectName.textContent = 'Project';
+    transactionsTableTitle.appendChild(projectName);
+    const amountInfo = document.createElement('div');
+    amountInfo.id = 'amount';
+    amountInfo.className = 'xpTable-column';
+    amountInfo.textContent = `XP`;
+    transactionsTableTitle.appendChild(amountInfo);
+    const gradeInfo = document.createElement('div');
+    gradeInfo.id = 'grade';
+    gradeInfo.className = 'xpTable-column';
+    gradeInfo.textContent = `Grade`;
+    transactionsTableTitle.appendChild(gradeInfo);
+    transactionsContainer.appendChild(transactionsTableTitle);
     for (const xpTransaction of xpTransactions) {
         const transactionElement = document.createElement('div');
         transactionElement.id = 'transactionElement';
@@ -136,20 +232,23 @@ export async function CreateTransactionsContainer(userToken, xpTransactions) {
         const projectNameInfo = xpTransaction.path.substring(xpTransaction.path.lastIndexOf('/') + 1);
         const projectName = document.createElement('div');
         projectName.id = 'projectName';
-        projectName.textContent = xpTransaction.attrs.reason ? xpTransaction.attrs.reason : 'Project: ' + projectNameInfo;
+        projectName.className = 'xpTable-column';
+        projectName.textContent = xpTransaction.attrs.reason ? xpTransaction.attrs.reason : projectNameInfo;
         transactionElement.appendChild(projectName);
 
         const amountInfo = document.createElement('div');
         amountInfo.id = 'amount';
-        amountInfo.textContent = `XP: ${xpTransaction.amount / 1000} kB`;
+        amountInfo.className = 'xpTable-column';
+        amountInfo.textContent = `${xpTransaction.amount / 1000} kB`;
         transactionElement.appendChild(amountInfo);
 
-        // const gradeInfo = document.createElement('div');
-        // gradeInfo.id = 'grade';
+        const gradeInfo = document.createElement('div');
+        gradeInfo.id = 'grade';
+        gradeInfo.className = 'xpTable-column';
         // const gradeResult = await GetGradeForProjectByObjectId(userToken, xpTransaction.objectId);
         // const grade = gradeResult.data.result[0] ? gradeResult.data.result[0].grade.toFixed(2) : '-';
-        // gradeInfo.textContent = `Grade: ${grade}`;
-        // transactionElement.appendChild(gradeInfo);
+        // gradeInfo.textContent = `${grade}`;
+        transactionElement.appendChild(gradeInfo);
 
         transactionsContainer.appendChild(transactionElement);
     }
@@ -214,7 +313,7 @@ export function FormatDate(inputDate) {
         hour: 'numeric',
         minute: 'numeric',
         second: 'numeric',
-        hour12: true
+        hour12: false
     };
 
     return date.toLocaleString('en-US', options);
