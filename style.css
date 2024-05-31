@@ -30,17 +30,66 @@
 }
 
 #profileContainer {
-  border: solid 1px green;
+  border: solid 2px green;
 }
 
-#welcomeInfoContainer{
-  border: solid 1px purple;
+#welcomeInfoContainer {
+  border: solid 2px purple;
 }
 
 #transactionsContainer {
-  border: solid 1px rgb(25, 85, 105);
+  border: solid 2px rgb(25, 85, 105);
 }
 
 #transactionElement {
-  border: solid 1px rgb(151, 195, 210);
+  border: solid 2px rgb(151, 195, 210);
+}
+
+#auditsInfoContainer {
+  border: solid 2px rgb(255, 187, 0);
+}
+
+#auditsInfoContainer {
+  width: 600px;
+}
+
+#receivedAuditElement {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px;
+}
+
+.audit-column {
+  padding: 10px;
+  text-align: center;
+}
+
+.audit-column:first-child {
+  text-align: left;
+}
+
+.audit-column:last-child {
+  text-align: right;
+}
+
+#receivedAuditProjectName {
+  width: 30%;
+}
+
+#receivedAuditXP {
+  width: 20%;
+}
+
+#auditCreatedAt {
+  width: 50%;
+}
+
+.barGraphBar {
+  fill: #763bb9; /* Changed bar color to green */
+}
+
+.barGraphText {
+  fill: black;
 }

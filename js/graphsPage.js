@@ -1,5 +1,6 @@
 import { CreateLogoutButton } from "./authentication.js";
 import { GetGradeForProjectByObjectId, GetUserAudits, GetUserProfileInfo, GetUserTransactions } from "./graphQLRequests.js";
+import { CreateXpByProjectGraph } from "./graphsSVG.js";
 
 export async function LoadGraphsPage() {
     const logoutButton = await CreateLogoutButton();
@@ -16,14 +17,106 @@ export async function LoadGraphsPage() {
     main.appendChild(profileContainer);
 
     const userTransactions = await GetUserTransactions(userToken);
-    const xpTransactions = userTransactions.data.transaction.filter(transaction => transaction.type === "xp" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
-    // Sort transactions by createdAt
-    const sortedXpTransactions = xpTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const sortedUserTransactions = userTransactions.data.transaction.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const xpTransactions = sortedUserTransactions.filter(transaction => transaction.type === "xp" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
+    const upTransactions = sortedUserTransactions.filter(transaction => transaction.type === "up" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
+    const downTransactions = sortedUserTransactions.filter(transaction => transaction.type === "down" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
 
-    const transactionsContainer = await CreateTransactionsContainer(userToken, sortedXpTransactions);
+    const auditsInfoContainer = await CreateAuditsInfoContainer(userToken, upTransactions, downTransactions);
+    main.appendChild(auditsInfoContainer);
+
+    const transactionsContainer = await CreateTransactionsContainer(userToken, xpTransactions);
     main.appendChild(transactionsContainer);
-    
-    console.log(userProfile)
+
+    const xpBarGraphContainer = await CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions);
+    main.appendChild(xpBarGraphContainer);
+}
+
+export async function CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions) {
+    const xpBarGraphContainer = document.createElement('div');
+    xpBarGraphContainer.id = 'xpBarGraphContainer';
+
+    const createButton = (text, onClick) => {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.addEventListener('click', onClick);
+        return button;
+    };
+
+    const displayGraph = async (transactions) => {
+        xpBarGraphArea.innerHTML = ''; // Clear previous content
+        const barGraph = await CreateXpByProjectGraph(transactions);
+        xpBarGraphArea.appendChild(barGraph);
+    };
+
+    const xpButton = createButton('My Projects', () => displayGraph(xpTransactions));
+    const upButton = createButton('Done Audits', () => displayGraph(upTransactions));
+    const downButton = createButton('Received Audits', () => displayGraph(downTransactions));
+
+    const xpGraphsButtonContainer = document.createElement('div');
+    xpGraphsButtonContainer.id = 'xpGraphsButtonContainer';
+    xpGraphsButtonContainer.appendChild(xpButton);
+    xpGraphsButtonContainer.appendChild(upButton);
+    xpGraphsButtonContainer.appendChild(downButton);
+    xpBarGraphContainer.appendChild(xpGraphsButtonContainer);
+    const xpBarGraphArea = document.createElement('div');
+    xpBarGraphArea.id = 'xpBarGraphArea';
+    xpBarGraphContainer.appendChild(xpBarGraphArea);
+
+    // show default graph when loaded
+    displayGraph(xpTransactions);
+
+    return xpBarGraphContainer;
+}
+
+export async function CreateAuditsInfoContainer(userToken, upTransactions, downTransactions) {
+    const totalUp = upTransactions.reduce((total, transaction) => total + transaction.amount, 0);
+    const totalDown = downTransactions.reduce((total, transaction) => total + transaction.amount, 0);
+
+    const auditsInfoContainer = document.createElement('div');
+    auditsInfoContainer.id = 'auditsInfoContainer';
+
+    const auditsRatio = document.createElement('div');
+    auditsRatio.id = 'auditsRatio';
+    auditsRatio.innerText = 'Audits ratio: ' + (totalUp / totalDown).toFixed(1);
+    auditsInfoContainer.appendChild(auditsRatio);
+
+    const doneAudits = document.createElement('div');
+    doneAudits.id = 'doneAudits';
+    doneAudits.innerText = 'Done: ' + (totalUp / 1000000).toFixed(2) + ' MB';
+    auditsInfoContainer.appendChild(doneAudits);
+
+    const receivedAudits = document.createElement('div');
+    receivedAudits.id = 'receivedAudits';
+    receivedAudits.innerText = 'Received: ' + (totalDown / 1000000).toFixed(2) + ' MB';
+    auditsInfoContainer.appendChild(receivedAudits);
+    for (const transaction of downTransactions) {
+        const receivedAuditElement = document.createElement('div');
+        receivedAuditElement.id = 'receivedAuditElement';
+
+        const projectNameInfo = transaction.path.substring(transaction.path.lastIndexOf('/') + 1);
+        const receivedAuditProjectName = document.createElement('div');
+        receivedAuditProjectName.id = 'receivedAuditProjectName';
+        receivedAuditProjectName.className = 'audit-column';
+        receivedAuditProjectName.innerText = projectNameInfo;
+        receivedAuditElement.appendChild(receivedAuditProjectName);
+
+        const receivedAuditXP = document.createElement('div');
+        receivedAuditXP.id = 'receivedAuditXP';
+        receivedAuditXP.className = 'audit-column';
+        receivedAuditXP.innerText = (transaction.amount / 1000).toFixed(2) + ' kB';
+        receivedAuditElement.appendChild(receivedAuditXP);
+
+        const auditCreatedAt = document.createElement('div');
+        auditCreatedAt.id = 'auditCreatedAt';
+        auditCreatedAt.className = 'audit-column';
+        auditCreatedAt.innerText = FormatDate(transaction.createdAt);
+        receivedAuditElement.appendChild(auditCreatedAt);
+
+        auditsInfoContainer.appendChild(receivedAuditElement);
+    }
+
+    return auditsInfoContainer;
 }
 
 export async function CreateTransactionsContainer(userToken, xpTransactions) {
@@ -36,12 +129,11 @@ export async function CreateTransactionsContainer(userToken, xpTransactions) {
     totalXp.textContent = 'Total XP: ' + Math.round(totalXpInfo / 1000) + ' kB';
     transactionsContainer.appendChild(totalXp);
 
-    const prefix = "/johvi/div-01/";
     for (const xpTransaction of xpTransactions) {
         const transactionElement = document.createElement('div');
         transactionElement.id = 'transactionElement';
-        
-        const projectNameInfo = xpTransaction.path.replace(prefix, "");
+
+        const projectNameInfo = xpTransaction.path.substring(xpTransaction.path.lastIndexOf('/') + 1);
         const projectName = document.createElement('div');
         projectName.id = 'projectName';
         projectName.textContent = xpTransaction.attrs.reason ? xpTransaction.attrs.reason : 'Project: ' + projectNameInfo;
@@ -52,12 +144,12 @@ export async function CreateTransactionsContainer(userToken, xpTransactions) {
         amountInfo.textContent = `XP: ${xpTransaction.amount / 1000} kB`;
         transactionElement.appendChild(amountInfo);
 
-        const gradeInfo = document.createElement('div');
-        gradeInfo.id = 'grade';
-        const gradeResult = await GetGradeForProjectByObjectId(userToken, xpTransaction.objectId);
-        const grade = gradeResult.data.result[0] ? gradeResult.data.result[0].grade.toFixed(2) : '-';
-        gradeInfo.textContent = `Grade: ${grade}`;
-        transactionElement.appendChild(gradeInfo);
+        // const gradeInfo = document.createElement('div');
+        // gradeInfo.id = 'grade';
+        // const gradeResult = await GetGradeForProjectByObjectId(userToken, xpTransaction.objectId);
+        // const grade = gradeResult.data.result[0] ? gradeResult.data.result[0].grade.toFixed(2) : '-';
+        // gradeInfo.textContent = `Grade: ${grade}`;
+        // transactionElement.appendChild(gradeInfo);
 
         transactionsContainer.appendChild(transactionElement);
     }
@@ -112,3 +204,18 @@ export async function CreateProfileContainer(userProfile) {
     return profileContainer;
 }
 
+export function FormatDate(inputDate) {
+    const date = new Date(inputDate);
+
+    const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: true
+    };
+
+    return date.toLocaleString('en-US', options);
+}
