@@ -13,15 +13,74 @@ body {
 }
 
 /* 
-Login and logout buttons
+Items related to logging in and out
  */
 
+#loginContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+#loginForm {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 50px;
+  width: 500px;
+  margin-bottom: 15px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.881);
+  box-shadow: 0px 8px 6px rgba(173, 172, 172, 0.1);
+}
+
+#loginTitle {
+  text-transform: uppercase;
+  color: white;
+  font-weight: bold;
+  font-size: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+#loginInfo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+#loginForm input {
+  margin-bottom: 20px;
+  font-size: 16px;
+  height: 25px;
+  color: black;
+  font-size: medium;
+  margin-left: 70px;
+  margin-right: 70px;
+}
+
 #loginButton {
-  background-color: #30dd30;
+  background-color: rgb(63, 63, 63);
+  border: none;
+  border-radius: 4px;
+  text-transform: uppercase;
+  color: white;
+  padding: 10px 40px;
+  font-size: 15px;
+  display: flex;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  cursor: pointer;
 }
 
 #loginButton:hover {
-  background-color: #26b326;
+  background-color: rgb(99, 99, 99);
 }
 
 #logoutButton {
@@ -32,7 +91,6 @@ Login and logout buttons
   background-color: rgb(99, 99, 99);
 }
 
-#loginButton,
 #logoutButton {
   text-transform: uppercase;
   border: none;
@@ -45,7 +103,6 @@ Login and logout buttons
   margin-right: 50px;
   cursor: pointer;
   border-radius: 4px;
-  transition: background-color 0.3s ease;
 }
 
 /* 
@@ -84,9 +141,9 @@ Containers items
 #auditsInfoContainer,
 #gradesContainer {
   margin-left: 20px;
-  background-color: rgba(0, 0, 0, 0.881);
-  border-radius: 10px;
   margin-bottom: 15px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.881);
   box-shadow: 0px 8px 6px rgba(173, 172, 172, 0.1);
 }
 
