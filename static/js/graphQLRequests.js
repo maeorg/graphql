@@ -73,11 +73,11 @@ export async function GetUserTransactions(userToken) {
     }
 }
 
-export async function GetProgressWithGrades(userToken) {
+export async function GetProgressWithGrades(userToken, grade = 0) {
     const query = `{
         progress(where: {
             path: {_nregex: "piscine|onboarding"}
-            grade: {_neq: 0}
+            grade: {_neq: ${grade}}
         }) {
             createdAt
             objectId
