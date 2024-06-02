@@ -71,7 +71,7 @@ export async function LoginHandler(encodedCredentials) {
     if (response.ok) {
       const resultToken = await response.json();
       localStorage.setItem('jwt', resultToken);
-      window.location.href = '/';
+      window.location.reload();
     } else {
       throw new Error('Invalid credentials');
     }

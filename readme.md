@@ -15,10 +15,9 @@
   - XP amount
   - grades
   - audits
-  - skills
   - statistic graphs
 
-- In the statistic section you can generate graphs to see more about your journey and achievements in the school. This graphs is done using SVG. There is at least two different statistic graphs for the data given
+- In the statistic section you can see graphs to see more about your journey and achievements in the school. This graphs is done using SVG. There is at least two different statistic graphs for the data given
 
 ## 🏃 Run project & testing
 
