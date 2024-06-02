@@ -15,6 +15,12 @@ export const CreateLoginContainer = () => {
   loginInfo.textContent = 'Enter your 01.kood.tech credentials';
   loginForm.appendChild(loginInfo);
 
+  const loginErrorMessage = document.createElement('div');
+  loginErrorMessage.id = 'loginErrorMessage';
+  loginErrorMessage.className = 'errorMessage';
+  loginErrorMessage.innerHTML = '';
+  loginForm.appendChild(loginErrorMessage);
+
   const usernameOrEmail = document.createElement('input');
   usernameOrEmail.id = 'usernameOrEmail';
   usernameOrEmail.type = 'text';
@@ -28,17 +34,13 @@ export const CreateLoginContainer = () => {
   password.placeholder = 'Password';
   password.required = true;
   loginForm.appendChild(password);
-
+  
   const loginButton = document.createElement('button');
   loginButton.id = 'loginButton';
   loginButton.type = 'submit';
   loginButton.textContent = 'Log in';
   loginForm.appendChild(loginButton);
 
-  const loginErrorMessage = document.createElement('p');
-  loginErrorMessage.id = 'loginErrorMessage';
-  password.className = 'errorMessage';
-  loginForm.appendChild(loginErrorMessage);
 
   loginContainer.appendChild(loginForm);
 
@@ -76,7 +78,7 @@ export async function LoginHandler(encodedCredentials) {
       throw new Error('Invalid credentials');
     }
   } catch (error) {
-    loginErrorMessage.textContent = 'Invalid credentials. Please try again.';
+    loginErrorMessage.textContent = 'Invalid credentials. Try again.';
   }
 }
 
