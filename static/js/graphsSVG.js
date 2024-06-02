@@ -198,7 +198,7 @@ export async function CreateAuditRatioLineChart(data) {
     for (let i = 0; i < parsedData.length; i++) {
         const d = parsedData[i];
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        const labelText = `${d.date.toLocaleString('default', { day: 'numeric', month: 'short'})}, ${d.date.getFullYear().toString().slice(-2)}`;
+        const labelText = `${d.date.toLocaleString('default', { day: 'numeric', month: 'short' })}, ${d.date.getFullYear().toString().slice(-2)}`;
         let textX = scaleX(d.date);
         let textY = height + margin.bottom;
 

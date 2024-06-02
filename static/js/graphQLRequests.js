@@ -73,45 +73,21 @@ export async function GetUserTransactions(userToken) {
     }
 }
 
-export async function GetGradeForProjectByObjectId(userToken, objectId) {
-    const query = `
-    {
-        result(where: { objectId: { _eq: ${objectId}}}){
+export async function GetProgressWithGrades(userToken) {
+    const query = `{
+        progress(where: {
+            path: {_nregex: "piscine|onboarding"}
+            grade: {_neq: 0}
+        }) {
+            createdAt
+            objectId
+            path
             grade
-        }
-    }`;
-    const queryBody = {
-        query,
-    };
-
-    try {
-        const response = await GraphQLRequest(queryBody, userToken);
-        return response;
-    } catch (error) {
-        console.error('Error fetching grade:', error);
-        throw error;
-    }
-}
-
-export async function GetUserAudits(userToken) {
-    const query = `
-    {
-        audit(
-          where: {_and: [{resultId: {_neq: 0}}, {grade: {_neq: 0}}, {auditorId: {_eq: 9501}}]}
-        ) {
-          id
-          groupId
-          auditorId
-          attrs
-          grade
-          createdAt
-          updatedAt
-          resultId
-          version
-          endAt
-          private {
-            code
-          }
+            userId
+            user {
+                id
+                login
+            }
         }
       }`;
     const queryBody = {
@@ -122,7 +98,7 @@ export async function GetUserAudits(userToken) {
         const response = await GraphQLRequest(queryBody, userToken);
         return response;
     } catch (error) {
-        console.error('Error fetching user transactions:', error);
+        console.error('Error fetching grade:', error);
         throw error;
     }
 }

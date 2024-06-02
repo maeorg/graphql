@@ -1,5 +1,5 @@
 import { CreateLogoutButton } from "./authentication.js";
-import { GetGradeForProjectByObjectId, GetUserAudits, GetUserProfileInfo, GetUserTransactions } from "./graphQLRequests.js";
+import { GetProgressWithGrades, GetUserProfileInfo, GetUserTransactions } from "./graphQLRequests.js";
 import { CreateAuditRatioLineChart, CreateXpByProjectGraph } from "./graphsSVG.js";
 
 export async function LoadGraphsPage() {
@@ -24,6 +24,9 @@ export async function LoadGraphsPage() {
     const upTransactions = sortedUserTransactions.filter(transaction => transaction.type === "up" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
     const downTransactions = sortedUserTransactions.filter(transaction => transaction.type === "down" && transaction.path.includes('/johvi/div-01') && !transaction.path.includes('piscine'));
 
+    const xpBarGraphContainer = await CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions);
+    main.appendChild(xpBarGraphContainer);
+
     function CreateAuditsRatioData() {
         let auditsRatiosData = [];
         const oldestToNewestTransactions = userTransactions.data.transaction.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -44,16 +47,6 @@ export async function LoadGraphsPage() {
     }
     const auditsRatiosData = CreateAuditsRatioData();
 
-    const transactionsContainer = await CreateTransactionsContainer(userToken, xpTransactions);
-    main.appendChild(transactionsContainer);
-
-    const auditsInfoContainer = await CreateAuditsInfoContainer(userToken, upTransactions, downTransactions);
-    main.appendChild(auditsInfoContainer);
-
-    const xpBarGraphContainer = await CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions);
-    main.appendChild(xpBarGraphContainer);
-
-
     // create and update audit ratio line chart
     const auditRatioLineChartContainer = document.createElement('div');
     auditRatioLineChartContainer.id = 'auditRatioLineChartContainer';
@@ -62,7 +55,7 @@ export async function LoadGraphsPage() {
 
     const auditRatioLineChartTitle = document.createElement('div');
     auditRatioLineChartTitle.id = 'auditRatioLineChartTitle';
-    auditRatioLineChartTitle.textContent = 'Audit Ratio Chart';
+    auditRatioLineChartTitle.textContent = 'Audits Ratio Chart';
     auditRatioLineChartContainer.appendChild(auditRatioLineChartTitle);
 
     const timePeriodContainer = document.createElement('div');
@@ -89,6 +82,67 @@ export async function LoadGraphsPage() {
     auditRatioLineChartContainer.appendChild(chartContainer);
     main.appendChild(auditRatioLineChartContainer);
     await CreateAuditRatioLineChart(auditsRatiosData);
+
+    const auditsInfoContainer = await CreateAuditsInfoContainer(userToken, upTransactions, downTransactions);
+    main.appendChild(auditsInfoContainer);
+
+
+    const gradesAndXpContainer = document.createElement('div');
+    gradesAndXpContainer.id = 'gradesAndXpContainer';
+    const transactionsContainer = await CreateTransactionsContainer(userToken, xpTransactions);
+    gradesAndXpContainer.appendChild(transactionsContainer);
+    const gradesContainer = await CreateProgressWithGradesContainer(userToken)
+    gradesAndXpContainer.appendChild(gradesContainer);
+    main.appendChild(gradesAndXpContainer);
+}
+
+export async function CreateProgressWithGradesContainer(userToken) {
+    const gradesContainer = document.createElement('div');
+    gradesContainer.id = 'gradesContainer';
+
+    let progressWithGrades = await GetProgressWithGrades(userToken);
+    progressWithGrades = progressWithGrades.data.progress.sort((a, b) => b.grade - a.grade);
+
+    const averageGrade = progressWithGrades.reduce((total, item) => total + item.grade, 0) / progressWithGrades.length;
+    const averageGradeElement = document.createElement('div');
+    averageGradeElement.id = 'averageGradeElement';
+    averageGradeElement.textContent = 'Average Grade: ' + averageGrade.toFixed(2);
+    gradesContainer.appendChild(averageGradeElement);
+
+    const gradesTableColumnsTitlesContainer = document.createElement('div');
+    gradesTableColumnsTitlesContainer.id = 'gradesTableColumnsTitlesContainer';
+
+    const projectNameColumnTitle = document.createElement('div');
+    projectNameColumnTitle.id = 'projectNameColumnTitle';
+    projectNameColumnTitle.textContent = 'Project';
+    gradesTableColumnsTitlesContainer.appendChild(projectNameColumnTitle);
+
+    const gradeColumnTitle = document.createElement('div');
+    gradeColumnTitle.id = 'gradeColumnTitle';
+    gradeColumnTitle.textContent = `Grade`;
+    gradesTableColumnsTitlesContainer.appendChild(gradeColumnTitle);
+
+    gradesContainer.appendChild(gradesTableColumnsTitlesContainer);
+
+    for (const projectItem of progressWithGrades) {
+        const projectElement = document.createElement('div');
+        projectElement.id = 'projectElement';
+
+        const projectNameInfo = projectItem.path.substring(projectItem.path.lastIndexOf('/') + 1);
+        const projectName = document.createElement('div');
+        projectName.id = 'projectName';
+        projectName.textContent = projectNameInfo;
+        projectElement.appendChild(projectName);
+
+        const grade = document.createElement('div');
+        grade.id = 'grade';
+        grade.textContent = projectItem.grade.toFixed(2);
+        projectElement.appendChild(grade);
+
+        gradesContainer.appendChild(projectElement);
+    }
+
+    return gradesContainer;
 }
 
 export async function CreateXpGraphsContainer(xpTransactions, upTransactions, downTransactions) {
@@ -117,8 +171,8 @@ export async function CreateXpGraphsContainer(xpTransactions, upTransactions, do
     };
 
     const xpButton = createButton('My Projects', () => displayGraph(xpTransactions));
-    const upButton = createButton('Done Audits', () => displayGraph(upTransactions));
-    const downButton = createButton('Received Audits', () => displayGraph(downTransactions));
+    const upButton = createButton('Done Audits', () => displayGraph(upTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))));
+    const downButton = createButton('Received Audits', () => displayGraph(downTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))));
 
     const xpGraphsButtonContainer = document.createElement('div');
     xpGraphsButtonContainer.id = 'xpGraphsButtonContainer';
@@ -182,14 +236,25 @@ export async function CreateAuditsInfoContainer(userToken, upTransactions, downT
 
     const doneAudits = document.createElement('div');
     doneAudits.id = 'doneAudits';
-    doneAudits.innerText = 'Done: ' + (totalUp / 1000000).toFixed(2) + ' MB';
-    doneAudits.addEventListener('click', () => displayAuditsList(downTransactions));
+    doneAudits.className = 'chooseAuditsButton';
+    doneAudits.innerText = 'Done: ' + (totalUp / 1000000).toFixed(2) + ' MB ->';
+    doneAudits.addEventListener('click', () => {
+        document.querySelectorAll('.chooseAuditsButton').forEach(btn => btn.classList.remove('selectedAuditsButton'));
+        doneAudits.classList.add('selectedAuditsButton');
+        displayAuditsList(upTransactions);
+    });
     auditsInfoContainer.appendChild(doneAudits);
+    doneAudits.click();
 
     const receivedAudits = document.createElement('div');
     receivedAudits.id = 'receivedAudits';
-    receivedAudits.innerText = 'Received: ' + (totalDown / 1000000).toFixed(2) + ' MB';
-    receivedAudits.addEventListener('click', () => displayAuditsList(upTransactions));
+    receivedAudits.className = 'chooseAuditsButton';
+    receivedAudits.innerText = 'Received: ' + (totalDown / 1000000).toFixed(2) + ' MB ->';
+    receivedAudits.addEventListener('click', () => {
+        document.querySelectorAll('.chooseAuditsButton').forEach(btn => btn.classList.remove('selectedAuditsButton'));
+        receivedAudits.classList.add('selectedAuditsButton');
+        displayAuditsList(downTransactions);
+    });
     auditsInfoContainer.appendChild(receivedAudits);
 
     auditsInfoContainer.appendChild(auditsElementsContainer);
@@ -219,11 +284,6 @@ export async function CreateTransactionsContainer(userToken, xpTransactions) {
     amountInfo.className = 'xpTable-column';
     amountInfo.textContent = `XP`;
     transactionsTableTitle.appendChild(amountInfo);
-    const gradeInfo = document.createElement('div');
-    gradeInfo.id = 'grade';
-    gradeInfo.className = 'xpTable-column';
-    gradeInfo.textContent = `Grade`;
-    transactionsTableTitle.appendChild(gradeInfo);
     transactionsContainer.appendChild(transactionsTableTitle);
     for (const xpTransaction of xpTransactions) {
         const transactionElement = document.createElement('div');
@@ -241,14 +301,6 @@ export async function CreateTransactionsContainer(userToken, xpTransactions) {
         amountInfo.className = 'xpTable-column';
         amountInfo.textContent = `${xpTransaction.amount / 1000} kB`;
         transactionElement.appendChild(amountInfo);
-
-        const gradeInfo = document.createElement('div');
-        gradeInfo.id = 'grade';
-        gradeInfo.className = 'xpTable-column';
-        // const gradeResult = await GetGradeForProjectByObjectId(userToken, xpTransaction.objectId);
-        // const grade = gradeResult.data.result[0] ? gradeResult.data.result[0].grade.toFixed(2) : '-';
-        // gradeInfo.textContent = `${grade}`;
-        transactionElement.appendChild(gradeInfo);
 
         transactionsContainer.appendChild(transactionElement);
     }
