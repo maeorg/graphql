@@ -83,7 +83,7 @@ export async function LoadGraphsPage() {
     main.appendChild(auditRatioLineChartContainer);
     await CreateAuditRatioLineChart(auditsRatiosData);
 
-    const auditsInfoContainer = await CreateAuditsInfoContainer(userToken, upTransactions, downTransactions);
+    const auditsInfoContainer = await CreateAuditsInfoContainer(upTransactions, downTransactions);
     main.appendChild(auditsInfoContainer);
 
 
@@ -190,7 +190,7 @@ export async function CreateXpGraphsContainer(xpTransactions, upTransactions, do
     return xpBarGraphContainer;
 }
 
-export async function CreateAuditsInfoContainer(userToken, upTransactions, downTransactions) {
+export async function CreateAuditsInfoContainer(upTransactions, downTransactions) {
     const totalUp = upTransactions.reduce((total, transaction) => total + transaction.amount, 0);
     const totalDown = downTransactions.reduce((total, transaction) => total + transaction.amount, 0);
 

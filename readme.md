@@ -27,4 +27,17 @@
 
 ## 🎨 Authors 
 
-- **kmaeorg - [Katrina Mäeorg](https://www.linkedin.com/in/katrina-maeorg/)**
+- **kmaeorg - [Katrina Mäeorg](https://www.linkedin.com/in/katrina-maeorg/)**  
+
+## Screenshots
+- Login:  
+<img src="./screenshots/1_login.jpg" alt="Login" width="800"/>  
+
+- Main:  
+<img src="./screenshots/2_main.jpg" alt="Main" width="800"/>  
+  
+<img src="./screenshots/3_main.jpg" alt="Main" width="800"/>  
+  
+<img src="./screenshots/4_main.jpg" alt="Main" width="800"/>  
+  
+<img src="./screenshots/5_main.jpg" alt="Main" width="800"/>  
